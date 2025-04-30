@@ -1,0 +1,79 @@
+/* Tema claro principal */
+:root {
+    --primary: #1DA1F2;
+    --secondary: #17A2B8;
+    --success: #28A745;
+    --danger: #DC3545;
+    --light: #F8F9FA;
+    --dark: #343A40;
+    --background: #FFFFFF;
+    --surface: #F8F9FA;
+    --text: #212529;
+}
+
+/* Container principal */
+.stApp {
+    background-color: var(--background) !important;
+    color: var(--text) !important;
+}
+
+/* Títulos */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--dark) !important;
+}
+
+/* Cards e containers */
+.st-emotion-cache-1jicfl2 {
+    background-color: var(--surface) !important;
+    border-radius: 10px !important;
+    padding: 20px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Botões */
+.stButton>button {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 10px 24px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s !important;
+    border: none !important;
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+}
+
+/* Dropdowns e seletores */
+.stSelectbox>div>div>select {
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+}
+
+/* Abas */
+[data-baseweb="tab-list"] button {
+    border-radius: 8px 8px 0 0 !important;
+    padding: 10px 20px !important;
+}
+
+/* Mapa */
+.folium-map {
+    border-radius: 10px !important;
+    border: 1px solid #dee2e6 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Tabelas e dados */
+.stDataFrame {
+    border-radius: 8px !important;
+}
+
+/* Uploader */
+.stFileUploader>div {
+    border: 2px dashed #ced4da !important;
+    border-radius: 10px !important;
+    padding: 2rem !important;
+    background-color: var(--surface) !important;
+}
