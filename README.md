@@ -76,14 +76,6 @@ streamlit run app.py
 - [Pillow](https://pillow.readthedocs.io/) – Manipulação de imagem
 - [ExifTool](https://exiftool.org/) – Leitura e escrita de metadados
 
-## ⚠️ Avisos
-
-- **Geolocalização ainda não funcional**  
-  A funcionalidade de geolocalização está em desenvolvimento. O `ExifTool` requer comandos específicos para gravar corretamente as coordenadas GPS. O método `geo_tagging()` no `app.py` será ajustado em breve para corrigir isso.
-- **Escrita consistente em EXIF, IPTC e XMP**  
-  Para evitar conflitos entre diferentes padrões de metadados, os dados deverão ser escritos simultaneamente em EXIF, IPTC e XMP. Essa melhoria será implementada nos próximos commits.
-- Funciona apenas com imagens no formato `.jpg` ou `.jpeg` que possuam metadados EXIF.
-- As alterações de localização GPS sobrescrevem os dados existentes na imagem original.
 
 ## 📜 Licença
 
