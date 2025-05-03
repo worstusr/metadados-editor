@@ -1,7 +1,6 @@
 import streamlit as st
 import tempfile
 from pathlib import Path
-from typing import Dict, Any, List, Optional
 from PIL import Image
 from utils.exif import ExifTool
 from utils.map_widget import InteractiveMap
@@ -12,7 +11,7 @@ import os
 class ExifEditor:
     def __init__(self):
         self.exif = ExifTool()
-        self.map = InteractiveMap(marker_color='blue', marker_icon='camera')
+        self.map = InteractiveMap(marker_color='red')
 
         # Presets de equipamentos
         self.camera_presets = {
@@ -286,24 +285,45 @@ class ExifEditor:
         return success
 
     def geo_tagging(self):
-        """Componente de geolocalização"""
+        """Componente de geolocalização atualizado"""
         if not st.session_state.get('image_path'):
-            return st.warning("Por favor, carregue uma imagem primeiro.")
+            st.warning("Por favor, carregue uma imagem primeiro.")
+            return
 
-        with st.expander("🌍 Georreferenciamento", expanded=True):
-            st.info("Arraste o marcador para a localização desejada ou clique no mapa para posicioná-lo")
-            lat, lon = self.map.display()
+        with st.expander("🌍 Geolocalização", expanded=True):
+            st.markdown("""
+                <div style="background: #f0f2f6; padding: 10px; border-radius: 10px; margin-bottom: 20px;">
+                    <b>Instruções:</b><br>
+                    1. Clique no mapa para posicionar o marcador<br>
+                    2. O metadado de localização será salvo automaticamente<br>
+                    3. Você pode substituir o marcador a qualquer momento
+                </div>
+            """, unsafe_allow_html=True)
 
-            if lat is not None and lon is not None:
-                if st.button("Salvar Localização", key='save_location'):
-                    try:
-                        if self.exif.write_gps_metadata(st.session_state.image_path, lat, lon):
-                            st.success(f"📍 Coordenadas gravadas com sucesso: {lat:.6f}, {lon:.6f}")
-                            st.session_state.modified = True
-                        else:
-                            st.error("Falha ao gravar coordenadas na imagem")
-                    except Exception as e:
-                        st.error(f"Erro ao gravar coordenadas: {str(e)}")
+            coords = self.map.display()
+
+            if coords and st.session_state.get('image_path'):
+                lat, lon = coords
+
+                # Atualiza a sessão
+                st.session_state.selected_latlon = (lat, lon)
+
+                gps_tags = {
+                    "GPSLatitude": abs(lat),
+                    "GPSLatitudeRef": "N" if lat >= 0 else "S",
+                    "GPSLongitude": abs(lon),
+                    "GPSLongitudeRef": "E" if lon >= 0 else "W"
+                }
+
+                try:
+                    success = self.exif.write_metadata(st.session_state.image_path, gps_tags)
+                    if success:
+                        st.toast(f"📍 Coordenadas aplicadas: {lat:.6f}, {lon:.6f}")
+                        st.session_state.modified = True
+                    else:
+                        st.error("Não foi possível gravar as coordenadas.")
+                except Exception as e:
+                    st.error(f"Erro ao gravar coordenadas: {str(e)}")
 
     def download_section(self):
         """Seção de download da imagem editada"""
