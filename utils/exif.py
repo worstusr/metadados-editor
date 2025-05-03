@@ -59,17 +59,19 @@ class ExifTool:
             raise Exception(f"Erro ao escrever metadados: {str(e)}")
 
     def write_gps_metadata(self, file_path: str, lat: float, lon: float) -> bool:
-        """Escreve metadados GPS de forma específica"""
+        """Escreve metadados GPS com precisão adequada"""
         try:
             lat_ref = 'S' if lat < 0 else 'N'
             lon_ref = 'W' if lon < 0 else 'E'
+            lat = round(abs(lat), 6)
+            lon = round(abs(lon), 6)
 
             args = [
                 self.exiftool_path,
                 "-overwrite_original",
-                f"-GPSLatitude={abs(lat)}",
+                f"-GPSLatitude={lat}",
                 f"-GPSLatitudeRef={lat_ref}",
-                f"-GPSLongitude={abs(lon)}",
+                f"-GPSLongitude={lon}",
                 f"-GPSLongitudeRef={lon_ref}",
                 file_path
             ]
@@ -89,13 +91,13 @@ class ExifTool:
     def get_supported_tags(self) -> Dict[str, str]:
         """Retorna todos os tags suportados pelo ExifTool"""
         try:
-            result = subprocess.run(
+            _ = subprocess.run(
                 [self.exiftool_path, "-listx"],
                 capture_output=True,
                 text=True,
                 check=True
             )
-            # Processar a saída XML para extrair as tags
+            # Processar a saída XML para extrair as etiquetas
             # Implementação simplificada - expandir conforme necessário
             return {}
         except Exception as e:
