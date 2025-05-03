@@ -1,158 +1,81 @@
 import folium
+from folium.plugins import MousePosition, Draw
 from streamlit_folium import st_folium
-from typing import Tuple, Optional, Dict, Any
 import streamlit as st
+from typing import Optional, Tuple
 
 
 class InteractiveMap:
     def __init__(
-            self,
-            default_location: Tuple[float, float] = (-14.2350, -51.9253),
-            zoom: int = 4,
-            marker_color: str = 'red',
-            marker_icon: str = 'info-sign'
+        self,
+        default_location: Tuple[float, float] = (-14.2350, -51.9253),
+        zoom_start: int = 12,
+        marker_color: str = 'red',
+        tile_layer: str = 'OpenStreetMap'
     ):
-        """
-        Inicializa o mapa interativo com configurações personalizáveis
-
-        Args:
-            default_location: Tupla (lat, lng) para a posição inicial
-            zoom: Nível de zoom inicial (1-18)
-            marker_color: Cor do marcador (blue, green, red, orange, etc.)
-            marker_icon: Ícone do marcador (ver opções em: https://fontawesome.com/icons)
-        """
         self.default_location = default_location
-        self.zoom = zoom
+        self.zoom_start = zoom_start
         self.marker_color = marker_color
-        self.marker_icon = marker_icon
-        self.marker = None
-        self.map = None
-        self.last_position = default_location
+        self.tile_layer = tile_layer
 
-    def create_map(self) -> folium.Map:
-        """Cria um mapa Folium com marcador arrastável e múltiplas camadas"""
-        try:
-            # Cria mapa com configurações otimizadas
-            self.map = folium.Map(
-                location=self.default_location,
-                zoom_start=self.zoom,
-                tiles='openstreetmap',
-                control_scale=True,
-                prefer_canvas=True  # Melhora performance com muitos marcadores
-            )
+    def display(self) -> Optional[Tuple[float, float]]:
+        # Estado inicial da coordenada
+        if "gps_coords" not in st.session_state:
+            st.session_state["gps_coords"] = self.default_location
 
-            # Adiciona marcador arrastável
-            self.marker = folium.Marker(
-                location=self.default_location,
-                draggable=True,
-                popup="Arraste para ajustar a localização",
-                icon=folium.Icon(color=self.marker_color, icon=self.marker_icon, prefix='fa')
-            )
-            self.marker.add_to(self.map)
+        fmap = folium.Map(
+            location=st.session_state["gps_coords"],
+            zoom_start=self.zoom_start,
+            tiles=self.tile_layer,
+            control_scale=True
+        )
 
-            # Adiciona camadas base
-            tile_layers = {
-                'OpenStreetMap': {
-                    'tiles': 'openstreetmap',
-                    'attr': '© OpenStreetMap contributors'
-                },
-                'Stamen Terrain': {
-                    'tiles': 'https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png',
-                    'attr': 'Map tiles by Stamen Design, under CC BY 3.0. Data by OSM'
-                },
-                'Satélite': {
-                    'tiles': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                    'attr': 'Tiles © Esri'
-                }
-            }
+        # Plugin de desenho apenas para marcador
+        draw = Draw(
+            draw_options={
+                "polyline": False,
+                "polygon": False,
+                "circle": False,
+                "rectangle": False,
+                "circlemarker": False,
+                "marker": True
+            },
+            edit_options={"edit": False, "remove": True}
+        )
+        draw.add_to(fmap)
 
-            for name, config in tile_layers.items():
-                folium.TileLayer(
-                    tiles=config['tiles'],
-                    attr=config['attr'],
-                    name=name
-                ).add_to(self.map)
+        self._add_mouse_position(fmap)
 
-            # Adiciona controle de camadas e minimapa
-            folium.LayerControl(position='topright').add_to(self.map)
-            folium.plugins.MiniMap().add_to(self.map)
+        # Renderiza mapa
+        map_data = st_folium(
+            fmap,
+            height=400,
+            use_container_width=True,
+            returned_objects=["last_active_drawing"]
+        )
 
-            # Adiciona controle de tela cheia
-            folium.plugins.Fullscreen(
-                position='topright',
-                title='Expandir mapa',
-                title_cancel='Sair do modo tela cheia',
-                force_separate_button=True
-            ).add_to(self.map)
+        # Captura marcador desenhado
+        drawing = map_data.get("last_active_drawing")
+        if drawing and drawing["geometry"]["type"] == "Point":
+            lon, lat = drawing["geometry"]["coordinates"]
+            st.session_state["gps_coords"] = (lat, lon)
 
-            return self.map
+        # Exibe coordenadas atuais
+        with st.container(border=True):
+            st.markdown("### 📍 Localização Atual")
+            st.write(f"**Latitude:** {st.session_state['gps_coords'][0]:.6f}")
+            st.write(f"**Longitude:** {st.session_state['gps_coords'][1]:.6f}")
 
-        except Exception as e:
-            st.error(f"Erro ao criar mapa: {str(e)}")
-            return None
+        return st.session_state["gps_coords"]
 
-    def display(self) -> Tuple[Optional[float], Optional[float]]:
-        """
-        Exibe o mapa no Streamlit e retorna as coordenadas selecionadas
-
-        Returns:
-            Tuple (latitude, longitude) ou (None, None) se nenhuma seleção foi feita
-        """
-        try:
-            if not self.map:
-                self.create_map()
-
-            if not self.map:
-                return None, None
-
-            # Configuração do componente no Streamlit
-            map_data = st_folium(
-                self.map,
-                height=500,
-                width='100%',  # Layout responsivo
-                returned_objects=[
-                    "last_active_drawing",
-                    "last_clicked",
-                    "bounds",
-                    "zoom"
-                ],
-                key="interactive_map"
-            )
-
-            # Verifica se o marcador foi movido
-            if map_data.get("last_active_drawing"):
-                coords = map_data["last_active_drawing"]["geometry"]["coordinates"]
-                self.last_position = (coords[1], coords[0])  # (lat, lng)
-                return self.last_position
-
-            # Verifica se houve clique no mapa
-            if map_data.get("last_clicked"):
-                self.last_position = (map_data["last_clicked"]["lat"], map_data["last_clicked"]["lng"])
-                return self.last_position
-
-            return None, None
-
-        except Exception as e:
-            st.error(f"Erro ao exibir mapa: {str(e)}")
-            return None, None
-
-    def get_last_position(self) -> Tuple[float, float]:
-        """Retorna a última posição conhecida do marcador"""
-        return self.last_position
-
-    def add_circle_marker(
-            self,
-            location: Tuple[float, float],
-            radius: int = 50,
-            color: str = 'blue',
-            fill: bool = True
-    ) -> None:
-        """Adiciona um marcador circular ao mapa"""
-        if self.map:
-            folium.CircleMarker(
-                location=location,
-                radius=radius,
-                color=color,
-                fill=fill,
-                fill_color=color
-            ).add_to(self.map)
+    @staticmethod
+    def _add_mouse_position(map_obj: folium.Map) -> None:
+        MousePosition(
+            position="bottomright",
+            separator=" | ",
+            empty_string="NaN",
+            num_digits=6,
+            prefix="📍 Coordenadas:",
+            lat_formatter="function(num) {return L.Util.formatNum(num, 6);}",
+            lng_formatter="function(num) {return L.Util.formatNum(num, 6);}"
+        ).add_to(map_obj)
